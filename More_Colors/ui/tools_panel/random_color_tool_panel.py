@@ -20,10 +20,11 @@ class MC_PT_random_color_tool_panel(BasePanelInfo, Panel):
 
         random_color_tool = context.scene.more_colors_random_color_tool
 
+        mesh_count = sum(1 for obj in context.selected_objects if obj.type == "MESH")
         show_element_type = True
         obj = context.active_object
 
-        if obj is not None:
+        if obj is not None and mesh_count <= 1:
             color_attribute = obj.data.color_attributes.active_color
 
             if color_attribute is not None:

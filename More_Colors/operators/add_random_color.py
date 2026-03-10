@@ -5,7 +5,9 @@
 
 import bpy
 
-from ..utilities.color_utilities import get_masked_color, get_random_color, get_active_color_attribute
+from ..utilities.color_utilities import (
+    get_masked_color, get_random_color, get_active_color_attribute, get_distinct_random_colors
+)
 from .base_operators import BaseColorOperator
 
 
@@ -97,10 +99,38 @@ class MC_OT_add_random_color(BaseColorOperator):
             random_color_tool.palette_color_4,
         ]
 
-        for obj in context.selected_objects:
-            if obj.type != "MESH":
-                continue
+        mesh_objects = [obj for obj in context.selected_objects if obj.type == "MESH"]
 
+        if random_color_tool.element_type == "Object":
+            self._apply_per_object(mesh_objects, global_color_settings, random_color_tool, palette)
+        else:
+            self._apply_per_element(mesh_objects, global_color_settings, random_color_tool, palette)
+
+        self.report({"INFO"}, "Random vertex color applied!")
+        return {"FINISHED"}
+
+    def _apply_per_object(self, mesh_objects, global_color_settings, random_color_tool, palette):
+        colors = get_distinct_random_colors(
+            len(mesh_objects), random_color_tool.color_mode, palette=palette
+        )
+        mask = global_color_settings.get_mask()
+
+        for obj, color in zip(mesh_objects, colors):
+            was_in_edit_mode = (obj.mode == "EDIT")
+            if was_in_edit_mode:
+                bpy.ops.object.mode_set(mode="OBJECT")
+
+            color_attribute = get_active_color_attribute(obj)
+            for data in color_attribute.data:
+                data.color_srgb = get_masked_color(data.color_srgb, color, mask)
+
+            obj.data.update()
+
+            if was_in_edit_mode:
+                bpy.ops.object.mode_set(mode="EDIT")
+
+    def _apply_per_element(self, mesh_objects, global_color_settings, random_color_tool, palette):
+        for obj in mesh_objects:
             was_in_edit_mode = (obj.mode == "EDIT")
             if was_in_edit_mode:
                 bpy.ops.object.mode_set(mode="OBJECT")

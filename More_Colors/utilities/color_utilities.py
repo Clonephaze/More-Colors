@@ -68,3 +68,34 @@ def get_active_color_attribute(obj):
 def get_color_from_palette(palette):
     """Randomly selects a color from the given palette list."""
     return random.choice(palette)
+
+
+def _color_distance(c1, c2):
+    """Euclidean distance between two colors in RGB space (ignores alpha)."""
+    return sum((c1[i] - c2[i]) ** 2 for i in range(3)) ** 0.5
+
+
+def get_distinct_random_colors(count, mode="RGBA", palette=None, min_distance=0.3, max_attempts=100):
+    """Generate a list of visually distinct random colors.
+
+    Uses rejection sampling to ensure minimum RGB distance between colors.
+    Falls back to the best candidate found if *min_distance* can't be met.
+    """
+    colors = []
+    for _ in range(count):
+        best_color = None
+        best_min_dist = -1
+        for _ in range(max_attempts):
+            candidate = get_random_color(mode, palette=palette)
+            if not colors:
+                best_color = candidate
+                break
+            min_dist = min(_color_distance(candidate, c) for c in colors)
+            if min_dist >= min_distance:
+                best_color = candidate
+                break
+            if min_dist > best_min_dist:
+                best_color = candidate
+                best_min_dist = min_dist
+        colors.append(best_color)
+    return colors
