@@ -17,10 +17,6 @@ class MC_OT_add_color_by_position(BaseColorOperator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        if not context.selected_objects:
-            self.report({"ERROR"}, "No objects selected!")
-            return {"CANCELLED"}
-
         scene = context.scene
         global_color_settings = scene.more_colors_global_color_settings
         color_by_position_tool = scene.more_colors_color_by_position_tool

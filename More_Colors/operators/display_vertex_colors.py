@@ -134,6 +134,7 @@ def _remove_alpha_display_material_from_all_mesh_objects(context):
             for slot in obj.material_slots:
                 if slot.material and slot.material.name == material_name:
                     obj.data.materials.pop(index=obj.material_slots.find(material_name))
+                    break
 
 
 class MC_OT_display_vertex_colors(BaseOperator):
@@ -141,6 +142,7 @@ class MC_OT_display_vertex_colors(BaseOperator):
 
     bl_label = "Display Vertex Colors"
     bl_idname = "morecolors.display_vertex_colors"
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         update_display(context)

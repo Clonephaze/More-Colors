@@ -6,7 +6,7 @@
 import bpy
 
 from ..utilities.color_utilities import get_masked_color, get_active_color_attribute
-from .base_operators import BaseColorOperator
+from .base_operators import BaseColorOperator, BaseOperator
 
 
 def _apply_fill(obj, color, mask, select_mode):
@@ -61,9 +61,6 @@ def execute_simple_fill(context):
 
     Returns (success, message) tuple.
     """
-    if not context.selected_objects:
-        return False, "No objects selected!"
-
     scene = context.scene
     global_color_settings = scene.more_colors_global_color_settings
     simple_fill_tool = scene.more_colors_simple_fill_tool
@@ -104,7 +101,7 @@ class MC_OT_simple_fill(BaseColorOperator):
         return {"FINISHED"}
 
 
-class MC_OT_select_preset_color(bpy.types.Operator):
+class MC_OT_select_preset_color(BaseOperator):
     """Selects the preset's color"""
 
     bl_label = "Select"
