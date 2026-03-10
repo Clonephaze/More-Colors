@@ -166,6 +166,3 @@ class MC_OT_add_random_color(BaseColorOperator):
 
             if was_in_edit_mode:
                 bpy.ops.object.mode_set(mode="EDIT")
-
-        self.report({"INFO"}, "Random vertex color applied!")
-        return {"FINISHED"}

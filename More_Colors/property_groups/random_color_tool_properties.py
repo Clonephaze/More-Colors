@@ -7,37 +7,20 @@ from bpy.props import EnumProperty, FloatVectorProperty
 from bpy.types import PropertyGroup
 
 
-_ELEMENT_TYPE_BASE = [
+_ELEMENT_TYPE_ITEMS = [
     ("Point", "Per Point", "Points are shared across faces", "DECORATE", 1),
     ("Vertex", "Per Vertex", "Vertices are unique per face", "VERTEXSEL", 2),
     ("Face", "Per Face", "Faces are well... faces", "SNAP_FACE", 3),
     ("Island", "Per Island", "All mesh parts that are connected", "FACE_MAPS", 4),
-]
-
-_ELEMENT_TYPE_WITH_OBJECT = _ELEMENT_TYPE_BASE + [
     ("Object", "Per Object", "Each selected object gets a unique random color", "OBJECT_DATA", 5),
 ]
-
-# Cache prevents garbage collection of dynamic enum items
-_element_type_cache = _ELEMENT_TYPE_BASE
-
-
-def _get_element_type_items(self, context):
-    global _element_type_cache
-    if context:
-        mesh_count = sum(1 for obj in context.selected_objects if obj.type == "MESH")
-        if mesh_count > 1:
-            _element_type_cache = _ELEMENT_TYPE_WITH_OBJECT
-            return _element_type_cache
-    _element_type_cache = _ELEMENT_TYPE_BASE
-    return _element_type_cache
 
 
 class RandomColorToolProperties(PropertyGroup):
     element_type: EnumProperty(
         name="Element",
         description="Elements to generate colors on",
-        items=_get_element_type_items,
+        items=_ELEMENT_TYPE_ITEMS,
     )
 
     color_mode: EnumProperty(

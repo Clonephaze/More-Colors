@@ -18,11 +18,4 @@ class BaseColorOperator(BaseOperator):
 
     @classmethod
     def poll(cls, context):
-        if len(context.selected_objects) == 0:
-            return False
-
-        for obj in context.selected_objects:
-            if obj.type != "MESH":
-                return False
-
-        return True
+        return any(obj.type == "MESH" for obj in context.selected_objects)
