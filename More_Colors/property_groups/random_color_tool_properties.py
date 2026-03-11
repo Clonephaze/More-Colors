@@ -3,7 +3,8 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from bpy.props import EnumProperty, FloatVectorProperty
+import bpy
+from bpy.props import EnumProperty, PointerProperty
 from bpy.types import PropertyGroup
 
 
@@ -29,46 +30,12 @@ class RandomColorToolProperties(PropertyGroup):
         items=[
             ("RGBA", "RGB", "Randomizes color by RGBA values."),
             ("Hue", "Hue", "Randomizes color only by hue. Saturation and alpha will be 1, lightness will be 0.5"),
-            ("Palette", "Palette", "Randomly selects colors from the 4-color palette"),
+            ("Palette", "Palette", "Randomly selects colors from a palette"),
         ]
     )
 
-    palette_color_1: FloatVectorProperty(
-        name="Palette Color 1",
-        description="Choose a color",
-        subtype="COLOR",
-        default=(1.000, 0.050, 0.078, 1.000),
-        min=0,
-        max=1,
-        size=4,
-    )
-
-    palette_color_2: FloatVectorProperty(
-        name="Palette Color 2",
-        description="Choose a color",
-        subtype="COLOR",
-        default=(1.000, 0.743, 0.050, 1.000),
-        min=0,
-        max=1,
-        size=4,
-    )
-
-    palette_color_3: FloatVectorProperty(
-        name="Palette Color 3",
-        description="Choose a color",
-        subtype="COLOR",
-        default=(0.498, 0.788, 0.039, 1.000),
-        min=0,
-        max=1,
-        size=4,
-    )
-
-    palette_color_4: FloatVectorProperty(
-        name="Palette Color 4",
-        description="Choose a color",
-        subtype="COLOR",
-        default=(0.038, 0.490, 0.768, 1.000),
-        min=0,
-        max=1,
-        size=4,
+    random_palette: PointerProperty(
+        type=bpy.types.Palette,
+        name="Palette",
+        description="Palette to randomly pick colors from",
     )

@@ -6,6 +6,9 @@
 from bpy.types import Panel
 
 from ..base_panel_info import BasePanelInfo
+from ...utilities.palette_utilities import (
+    SWATCH_COLS, ensure_palette_assigned, get_color_icon,
+)
 
 
 class MC_PT_random_color_tool_panel(BasePanelInfo, Panel):
@@ -47,23 +50,21 @@ class MC_PT_random_color_tool_panel(BasePanelInfo, Panel):
         row.prop(random_color_tool, "color_mode", expand=True)
 
         if random_color_tool.color_mode == "Palette":
-            row = layout.row()
-            row.label(text="Palette", icon="COLOR")
+            ensure_palette_assigned(random_color_tool, "random_palette")
+            box = layout.box()
+            box.label(text="Palette", icon="COLOR")
+            row = box.row(align=True)
+            row.prop(random_color_tool, "random_palette", text="")
+            row.operator("morecolors.new_palette", icon="FILE_NEW", text="")
 
-            column = layout.column(align=True)
-            split = column.split()
-
-            row = split.row()
-            row.prop(random_color_tool, "palette_color_1", text="")
-
-            row = split.row()
-            row.prop(random_color_tool, "palette_color_2", text="")
-
-            row = split.row()
-            row.prop(random_color_tool, "palette_color_3", text="")
-
-            row = split.row()
-            row.prop(random_color_tool, "palette_color_4", text="")
+            palette = random_color_tool.random_palette
+            if palette and len(palette.colors) > 0:
+                for i, pc in enumerate(palette.colors):
+                    if i % SWATCH_COLS == 0:
+                        row = box.row(align=True)
+                        row.alignment = 'LEFT'
+                    icon_id = get_color_icon(*pc.color)
+                    row.label(text="", icon_value=icon_id)
 
         row = layout.row()
         row.operator("morecolors.add_random_color", icon="SHADERFX")

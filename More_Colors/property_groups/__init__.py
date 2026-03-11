@@ -11,6 +11,7 @@ from . import (
     global_color_settings_properties,
     random_color_tool_properties,
     simple_fill_tool_properties,
+    smooth_tool_properties,
 )
 
 classes = [
@@ -19,6 +20,7 @@ classes = [
     color_by_position_tool_properties.ColorByPositionToolProperties,
     simple_fill_tool_properties.SimpleFillToolProperties,
     display_settings_properties.DisplaySettingsProperties,
+    smooth_tool_properties.SmoothToolProperties,
 ]
 
 
@@ -36,6 +38,8 @@ def register():
         type=simple_fill_tool_properties.SimpleFillToolProperties)
     bpy.types.Scene.more_colors_display_settings = bpy.props.PointerProperty(
         type=display_settings_properties.DisplaySettingsProperties)
+    bpy.types.Scene.more_colors_smooth_tool = bpy.props.PointerProperty(
+        type=smooth_tool_properties.SmoothToolProperties)
 
 
 def unregister():
@@ -47,3 +51,4 @@ def unregister():
     del bpy.types.Scene.more_colors_color_by_position_tool
     del bpy.types.Scene.more_colors_simple_fill_tool
     del bpy.types.Scene.more_colors_display_settings
+    del bpy.types.Scene.more_colors_smooth_tool

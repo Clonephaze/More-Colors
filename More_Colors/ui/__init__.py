@@ -16,6 +16,7 @@ from .tools_panel import (
     color_by_position_tool_panel,
     random_color_tool_panel,
     simple_fill_tool_panel,
+    smooth_tool_panel,
     tools_panel,
 )
 
@@ -25,6 +26,7 @@ classes = [
     simple_fill_tool_panel.MC_PT_simple_fill_tool_panel,
     random_color_tool_panel.MC_PT_random_color_tool_panel,
     color_by_position_tool_panel.MC_PT_color_by_position_tool_panel,
+    smooth_tool_panel.MC_PT_smooth_tool_panel,
 
     settings_panel.MC_PT_settings_panel,
     display_settings_panel.MC_PT_display_settings_panel,
@@ -43,4 +45,6 @@ def register():
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
-    simple_fill_tool_panel.cleanup_preset_previews()
+
+    from ..utilities.palette_utilities import cleanup_previews
+    cleanup_previews()

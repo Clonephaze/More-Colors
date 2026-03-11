@@ -87,12 +87,11 @@ class MC_OT_add_random_color(BaseColorOperator):
         random_color_tool = scene.more_colors_random_color_tool
         global_color_settings = scene.more_colors_global_color_settings
 
-        palette = [
-            random_color_tool.palette_color_1,
-            random_color_tool.palette_color_2,
-            random_color_tool.palette_color_3,
-            random_color_tool.palette_color_4,
-        ]
+        palette = None
+        if random_color_tool.random_palette and len(random_color_tool.random_palette.colors) > 0:
+            palette = [
+                (*pc.color, 1.0) for pc in random_color_tool.random_palette.colors
+            ]
 
         mesh_objects = [obj for obj in context.selected_objects if obj.type == "MESH"]
 

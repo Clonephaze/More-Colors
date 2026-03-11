@@ -138,6 +138,21 @@ class MC_OT_remove_preset_color(BaseOperator):
         return {"FINISHED"}
 
 
+class MC_OT_new_palette(BaseOperator):
+    """Creates a new color palette"""
+
+    bl_label = "New Palette"
+    bl_idname = "morecolors.new_palette"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        palette = bpy.data.palettes.new("Palette")
+        tool = context.scene.more_colors_simple_fill_tool
+        tool.preset_palette = palette
+        tool.active_preset_index = 0
+        return {"FINISHED"}
+
+
 class MC_OT_use_preset_color(BaseOperator):
     """Selects this preset and sets it as the active color"""
 
