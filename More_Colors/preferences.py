@@ -23,6 +23,7 @@ _SHORTCUT_OPERATORS = [
     ("Smooth Colors", "morecolors.smooth_vertex_colors"),
     ("Reset Vertex Colors", "morecolors.reset_vertex_colors"),
     ("Color By Selection", "morecolors.color_by_selection"),
+    ("Color Adjustments", "morecolors.color_adjustments"),
 ]
 
 
@@ -99,6 +100,11 @@ _GRADIENT_SOURCE_ITEMS = [
     ("NOISE", "Noise", ""),
     ("CURVATURE", "Curvature", ""),
     ("WEIGHT", "Weight", ""),
+    ("DIRTY", "Dirty Vertex Colors", ""),
+    ("VALENCE", "Valence", ""),
+    ("FACE_AREA", "Face Area", ""),
+    ("EDGE_LENGTH_VAR", "Edge Length Variance", ""),
+    ("FACE_QUALITY", "Face Quality", ""),
 ]
 
 _SPACE_TYPE_ITEMS = [
@@ -121,6 +127,21 @@ _DISTANCE_ORIGIN_ITEMS = [
     ("WORLD", "World Origin", ""),
 ]
 
+_SMOOTH_CONSTRAINT_ITEMS = [
+    ("NONE", "None", ""),
+    ("SHARP", "Sharp Edges", ""),
+    ("SEAM", "UV Seams", ""),
+    ("BOUNDARY", "Boundary", ""),
+]
+
+_ADJUSTMENT_OP_ITEMS = [
+    ("LEVELS", "Levels", ""),
+    ("BRIGHTNESS_CONTRAST", "Brightness / Contrast", ""),
+    ("HUE_SATURATION", "Hue / Saturation", ""),
+    ("INVERT", "Invert", ""),
+    ("POSTERIZE", "Posterize", ""),
+]
+
 
 # ---------------------------------------------------------------------------
 # Addon Preferences
@@ -135,6 +156,7 @@ class MoreColorsPreferences(AddonPreferences):
     show_randomize: BoolProperty(name="Randomize Defaults", default=False)
     show_gradient: BoolProperty(name="Gradient Defaults", default=False)
     show_smooth: BoolProperty(name="Smooth Defaults", default=False)
+    show_adjustments: BoolProperty(name="Color Adjustments Defaults", default=False)
     show_selection: BoolProperty(name="Selection Defaults", default=False)
     show_mask: BoolProperty(name="Color Mask Defaults", default=False)
     show_palette: BoolProperty(name="Default Palette", default=False)
@@ -213,6 +235,18 @@ class MoreColorsPreferences(AddonPreferences):
         min=0.0,
         max=1.0,
     )
+    default_smooth_constraint: EnumProperty(
+        name="Constraint",
+        items=_SMOOTH_CONSTRAINT_ITEMS,
+        default="NONE",
+    )
+
+    # -- Color Adjustments defaults --
+    default_adjustment_operation: EnumProperty(
+        name="Operation",
+        items=_ADJUSTMENT_OP_ITEMS,
+        default="LEVELS",
+    )
 
     # -- Selection defaults --
     default_selection_selected_color: FloatVectorProperty(
@@ -279,8 +313,15 @@ class MoreColorsPreferences(AddonPreferences):
         self._draw_section_header(layout, "show_smooth", "SMOOTHCURVE", "Smooth Defaults")
         if self.show_smooth:
             box = layout.box()
+            box.prop(self, "default_smooth_constraint")
             box.prop(self, "default_smooth_iterations")
             box.prop(self, "default_smooth_factor", slider=True)
+
+        # -- Color Adjustments Defaults --
+        self._draw_section_header(layout, "show_adjustments", "BRUSH_DATA", "Color Adjustments Defaults")
+        if self.show_adjustments:
+            box = layout.box()
+            box.prop(self, "default_adjustment_operation")
 
         # -- Selection Defaults --
         self._draw_section_header(layout, "show_selection", "RESTRICT_SELECT_OFF", "Selection Defaults")
@@ -388,6 +429,12 @@ def _apply_startup_defaults(_=None):
     if smooth_tool:
         smooth_tool.iterations = prefs.default_smooth_iterations
         smooth_tool.factor = prefs.default_smooth_factor
+        smooth_tool.constraint_mode = prefs.default_smooth_constraint
+
+    # Color Adjustments
+    adj_tool = getattr(scene, "more_colors_color_adjustments_tool", None)
+    if adj_tool:
+        adj_tool.operation = prefs.default_adjustment_operation
 
     # Selection
     selection_tool = getattr(scene, "more_colors_color_by_selection_tool", None)

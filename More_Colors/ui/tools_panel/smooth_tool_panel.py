@@ -18,6 +18,7 @@ class MC_PT_smooth_tool_panel(BasePanelInfo, Panel):
         layout = self.layout
         tool = context.scene.more_colors_smooth_tool
 
+        layout.prop(tool, "constraint_mode")
         layout.prop(tool, "iterations")
         layout.prop(tool, "factor", slider=True)
 

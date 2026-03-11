@@ -20,6 +20,10 @@ class ColorByPositionToolProperties(PropertyGroup):
             ("CURVATURE", "Curvature", "Surface curvature (convex vs concave)", "SMOOTHCURVE", 4),
             ("WEIGHT", "Weight", "Active vertex group weights", "GROUP_VERTEX", 5),
             ("DIRTY", "Dirty Vertex Colors", "Cavity/occlusion based on vertex normals", "SHADING_RENDERED", 6),
+            ("VALENCE", "Valence", "Number of edges connected to each vertex", "VERTEXSEL", 7),
+            ("FACE_AREA", "Face Area", "Average area of adjacent faces per vertex", "FACESEL", 8),
+            ("EDGE_LENGTH_VAR", "Edge Length Variance", "Variance of connected edge lengths per vertex", "EDGESEL", 9),
+            ("FACE_QUALITY", "Face Quality", "Regularity of adjacent faces per vertex", "MESH_DATA", 10),
         ],
         default="POSITION",
     )

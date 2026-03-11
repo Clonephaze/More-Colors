@@ -61,6 +61,9 @@ class MC_PT_color_by_position_tool_panel(BasePanelInfo, Panel):
                 else:
                     layout.label(text="No active vertex group.", icon="INFO")
 
+            case "VALENCE" | "FACE_AREA" | "EDGE_LENGTH_VAR" | "FACE_QUALITY":
+                pass
+
         material = bpy.data.materials.get(tool.color_ramp_material_name)
         if material is not None:
             node = material.node_tree.nodes['Color Ramp']

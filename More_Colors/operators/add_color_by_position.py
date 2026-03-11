@@ -63,6 +63,14 @@ class MC_OT_add_color_by_position(BaseColorOperator):
                 return self._weight_values(obj)
             case "DIRTY":
                 return self._dirty_values(obj, tool)
+            case "VALENCE":
+                return self._valence_values(obj)
+            case "FACE_AREA":
+                return self._face_area_values(obj)
+            case "EDGE_LENGTH_VAR":
+                return self._edge_length_variance_values(obj)
+            case "FACE_QUALITY":
+                return self._face_quality_values(obj)
 
     # ---- Per-source value computation ----
 
@@ -257,6 +265,152 @@ class MC_OT_add_color_by_position(BaseColorOperator):
             values = np.where(has_neighbors, values + (avg - values) * strength, values)
 
         return MC_OT_add_color_by_position._normalize_np(values) if tool.dirt_normalize else values
+
+    @staticmethod
+    def _valence_values(obj):
+        """Per-vertex edge valence (number of connected edges)."""
+        mesh = obj.data
+        n = len(mesh.vertices)
+        n_edges = len(mesh.edges)
+        edge_verts = np.empty(n_edges * 2, dtype=np.int32)
+        mesh.edges.foreach_get("vertices", edge_verts)
+        v0 = edge_verts[0::2]
+        v1 = edge_verts[1::2]
+
+        valence = np.zeros(n, dtype=np.float64)
+        np.add.at(valence, v0, 1)
+        np.add.at(valence, v1, 1)
+        return MC_OT_add_color_by_position._normalize_np(valence)
+
+    @staticmethod
+    def _face_area_values(obj):
+        """Average area of adjacent faces per vertex."""
+        mesh = obj.data
+        n = len(mesh.vertices)
+        n_polys = len(mesh.polygons)
+        n_loops = len(mesh.loops)
+
+        areas = np.empty(n_polys, dtype=np.float64)
+        mesh.polygons.foreach_get("area", areas)
+
+        loop_verts = np.empty(n_loops, dtype=np.int32)
+        mesh.loops.foreach_get("vertex_index", loop_verts)
+
+        loop_totals = np.empty(n_polys, dtype=np.int32)
+        mesh.polygons.foreach_get("loop_total", loop_totals)
+
+        # Map each loop to its face index
+        loop_face = np.repeat(np.arange(n_polys, dtype=np.int32), loop_totals)
+
+        area_sum = np.zeros(n, dtype=np.float64)
+        area_count = np.zeros(n, dtype=np.float64)
+        np.add.at(area_sum, loop_verts, areas[loop_face])
+        np.add.at(area_count, loop_verts, 1)
+        area_count = np.maximum(area_count, 1)
+
+        return MC_OT_add_color_by_position._normalize_np(area_sum / area_count)
+
+    @staticmethod
+    def _edge_length_variance_values(obj):
+        """Variance of connected edge lengths per vertex."""
+        mesh = obj.data
+        n = len(mesh.vertices)
+
+        coords = np.empty(n * 3, dtype=np.float64)
+        mesh.vertices.foreach_get("co", coords)
+        coords = coords.reshape(n, 3)
+
+        n_edges = len(mesh.edges)
+        edge_verts = np.empty(n_edges * 2, dtype=np.int32)
+        mesh.edges.foreach_get("vertices", edge_verts)
+        v0 = edge_verts[0::2]
+        v1 = edge_verts[1::2]
+
+        edge_lengths = np.linalg.norm(coords[v1] - coords[v0], axis=1)
+
+        edge_sum = np.zeros(n, dtype=np.float64)
+        edge_sq_sum = np.zeros(n, dtype=np.float64)
+        edge_count = np.zeros(n, dtype=np.float64)
+        np.add.at(edge_sum, v0, edge_lengths)
+        np.add.at(edge_sum, v1, edge_lengths)
+        np.add.at(edge_sq_sum, v0, edge_lengths ** 2)
+        np.add.at(edge_sq_sum, v1, edge_lengths ** 2)
+        np.add.at(edge_count, v0, 1)
+        np.add.at(edge_count, v1, 1)
+
+        has_edges = edge_count > 0
+        mean_len = np.zeros(n, dtype=np.float64)
+        mean_len[has_edges] = edge_sum[has_edges] / edge_count[has_edges]
+
+        variance = np.zeros(n, dtype=np.float64)
+        variance[has_edges] = (
+            edge_sq_sum[has_edges] / edge_count[has_edges]
+            - mean_len[has_edges] ** 2
+        )
+        return MC_OT_add_color_by_position._normalize_np(variance)
+
+    @staticmethod
+    def _face_quality_values(obj):
+        """Regularity of adjacent faces per vertex.
+
+        Uses the isoperimetric quotient normalised per polygon side count so
+        that any regular polygon scores 1.0 and degenerate faces approach 0.
+        """
+        mesh = obj.data
+        n = len(mesh.vertices)
+        n_polys = len(mesh.polygons)
+        n_loops = len(mesh.loops)
+
+        coords = np.empty(n * 3, dtype=np.float64)
+        mesh.vertices.foreach_get("co", coords)
+        coords = coords.reshape(n, 3)
+
+        areas = np.empty(n_polys, dtype=np.float64)
+        mesh.polygons.foreach_get("area", areas)
+
+        loop_verts = np.empty(n_loops, dtype=np.int32)
+        mesh.loops.foreach_get("vertex_index", loop_verts)
+
+        loop_starts = np.empty(n_polys, dtype=np.int32)
+        loop_totals = np.empty(n_polys, dtype=np.int32)
+        mesh.polygons.foreach_get("loop_start", loop_starts)
+        mesh.polygons.foreach_get("loop_total", loop_totals)
+
+        # Build "next vertex in face" for each loop — fully vectorized
+        next_loop = np.arange(1, n_loops + 1, dtype=np.int32)
+        face_ends = loop_starts + loop_totals - 1
+        next_loop[face_ends] = loop_starts
+
+        # Per-loop edge lengths
+        edge_vectors = coords[loop_verts[next_loop]] - coords[loop_verts]
+        edge_lengths = np.linalg.norm(edge_vectors, axis=1)
+
+        # Map each loop to its face index
+        loop_face = np.repeat(np.arange(n_polys, dtype=np.int32), loop_totals)
+
+        # Per-face perimeter
+        perimeter = np.zeros(n_polys, dtype=np.float64)
+        np.add.at(perimeter, loop_face, edge_lengths)
+
+        # Isoperimetric quotient: 4*pi*area / perimeter^2
+        quality = np.zeros(n_polys, dtype=np.float64)
+        safe = perimeter > 1e-12
+        quality[safe] = 4.0 * np.pi * areas[safe] / (perimeter[safe] ** 2)
+
+        # Normalise per polygon type so regular n-gons score 1.0
+        safe_totals = np.maximum(loop_totals, 3).astype(np.float64)
+        regular_factor = safe_totals * np.tan(np.pi / safe_totals) / np.pi
+        quality *= regular_factor
+
+        # Average quality per vertex
+        quality_per_loop = quality[loop_face]
+        quality_sum = np.zeros(n, dtype=np.float64)
+        quality_count = np.zeros(n, dtype=np.float64)
+        np.add.at(quality_sum, loop_verts, quality_per_loop)
+        np.add.at(quality_count, loop_verts, 1)
+        quality_count = np.maximum(quality_count, 1)
+
+        return MC_OT_add_color_by_position._normalize_np(quality_sum / quality_count)
 
     # ---- Shared helpers ----
 

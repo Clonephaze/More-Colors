@@ -8,6 +8,7 @@ import bpy
 from . import (
     add_color_by_position,
     add_random_color,
+    color_adjustments,
     color_by_selection,
     display_vertex_colors,
     open_documentation,
@@ -36,6 +37,8 @@ classes = [
     smooth_vertex_colors.MC_OT_smooth_vertex_colors,
 
     color_by_selection.MC_OT_color_by_selection,
+
+    color_adjustments.MC_OT_color_adjustments,
 ]
 
 

@@ -26,13 +26,13 @@ class MC_OT_smooth_vertex_colors(BaseColorOperator):
             if obj.type != "MESH":
                 continue
             with ensure_object_mode(obj):
-                self._smooth_object(obj, tool.iterations, tool.factor, mask)
+                self._smooth_object(obj, tool.iterations, tool.factor, mask, tool.constraint_mode)
 
         self.report({"INFO"}, "Vertex colors smoothed!")
         return {"FINISHED"}
 
     @staticmethod
-    def _smooth_object(obj, iterations, factor, mask):
+    def _smooth_object(obj, iterations, factor, mask, constraint_mode="NONE"):
         mesh = obj.data
         color_attribute = get_active_color_attribute(obj)
         num_verts = len(mesh.vertices)
@@ -44,6 +44,26 @@ class MC_OT_smooth_vertex_colors(BaseColorOperator):
         mesh.edges.foreach_get("vertices", edge_verts)
         v0 = edge_verts[0::2]
         v1 = edge_verts[1::2]
+
+        # Apply topology constraint — filter edges
+        if constraint_mode == "SHARP":
+            sharp = np.empty(n_edges, dtype=bool)
+            mesh.edges.foreach_get("use_edge_sharp", sharp)
+            keep = ~sharp
+            v0, v1 = v0[keep], v1[keep]
+        elif constraint_mode == "SEAM":
+            seam = np.empty(n_edges, dtype=bool)
+            mesh.edges.foreach_get("use_seam", seam)
+            keep = ~seam
+            v0, v1 = v0[keep], v1[keep]
+        elif constraint_mode == "BOUNDARY":
+            n_loops = len(mesh.loops)
+            loop_edges = np.empty(n_loops, dtype=np.int32)
+            mesh.loops.foreach_get("edge_index", loop_edges)
+            face_count = np.zeros(n_edges, dtype=np.int32)
+            np.add.at(face_count, loop_edges, 1)
+            keep = face_count > 1
+            v0, v1 = v0[keep], v1[keep]
 
         # Compute per-vertex neighbor counts (constant across iterations)
         neighbor_count = np.zeros(num_verts, dtype=np.float32)

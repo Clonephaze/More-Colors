@@ -2,11 +2,23 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from bpy.props import FloatProperty, IntProperty
+from bpy.props import EnumProperty, FloatProperty, IntProperty
 from bpy.types import PropertyGroup
 
 
 class SmoothToolProperties(PropertyGroup):
+    constraint_mode: EnumProperty(
+        name="Constraint",
+        description="Limit smoothing across topology boundaries",
+        items=[
+            ("NONE", "None", "Smooth across all edges", "NONE", 0),
+            ("SHARP", "Sharp Edges", "Don\u2019t smooth across sharp-marked edges", "SHARPCURVE", 1),
+            ("SEAM", "UV Seams", "Don\u2019t smooth across UV seam edges", "UV", 2),
+            ("BOUNDARY", "Boundary", "Don\u2019t smooth across boundary edges", "MESH_PLANE", 3),
+        ],
+        default="NONE",
+    )
+
     iterations: IntProperty(
         name="Iterations",
         description="Number of smoothing passes",
