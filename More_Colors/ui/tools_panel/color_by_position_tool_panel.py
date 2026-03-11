@@ -30,9 +30,6 @@ class MC_PT_color_by_position_tool_panel(BasePanelInfo, Panel):
                 layout.prop(tool, "gradient_direction")
 
             case "DISTANCE":
-                row = layout.row()
-                row.label(text="Space:")
-                row.prop(tool, "space_type", expand=True)
                 layout.prop(tool, "distance_origin")
 
             case "NOISE":

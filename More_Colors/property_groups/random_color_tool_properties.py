@@ -13,7 +13,8 @@ _ELEMENT_TYPE_ITEMS = [
     ("Vertex", "Per Vertex", "Vertices are unique per face", "VERTEXSEL", 2),
     ("Face", "Per Face", "Faces are well... faces", "SNAP_FACE", 3),
     ("Island", "Per Island", "All mesh parts that are connected", "FACE_MAPS", 4),
-    ("Object", "Per Object", "Each selected object gets a unique random color", "OBJECT_DATA", 5),
+    ("FaceSet", "Per Face Set", "Groups defined by sculpt face sets", "FACE_MAPS", 5),
+    ("Object", "Per Object", "Each selected object gets a unique random color", "OBJECT_DATA", 6),
 ]
 
 

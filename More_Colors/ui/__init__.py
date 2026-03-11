@@ -14,6 +14,7 @@ from .settings_panel import (
 )
 from .tools_panel import (
     color_by_position_tool_panel,
+    color_by_selection_tool_panel,
     random_color_tool_panel,
     simple_fill_tool_panel,
     smooth_tool_panel,
@@ -27,6 +28,7 @@ classes = [
     random_color_tool_panel.MC_PT_random_color_tool_panel,
     color_by_position_tool_panel.MC_PT_color_by_position_tool_panel,
     smooth_tool_panel.MC_PT_smooth_tool_panel,
+    color_by_selection_tool_panel.MC_PT_color_by_selection_tool_panel,
 
     settings_panel.MC_PT_settings_panel,
     display_settings_panel.MC_PT_display_settings_panel,

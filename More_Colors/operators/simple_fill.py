@@ -12,8 +12,18 @@ from .base_operators import BaseColorOperator, BaseOperator
 
 
 def _apply_fill(obj, color, mask, select_mode):
-    """Apply color fill using the mesh data API (requires object mode)."""
+    """Apply color fill using the mesh data API (requires object mode).
+
+    When *select_mode* is ``None`` (object mode), all elements are colored.
+    """
     color_attribute = get_active_color_attribute(obj)
+
+    # Object-mode fast path: color everything
+    if select_mode is None:
+        for data in color_attribute.data:
+            data.color_srgb = get_masked_color(data.color_srgb, color, mask)
+        obj.data.update()
+        return
 
     match color_attribute.domain:
         case "CORNER":
@@ -65,7 +75,7 @@ def execute_simple_fill(context):
     simple_fill_tool = scene.more_colors_simple_fill_tool
     mask = global_color_settings.get_mask()
     color = simple_fill_tool.selected_color
-    select_mode = context.tool_settings.mesh_select_mode
+    select_mode = context.tool_settings.mesh_select_mode if context.mode == 'EDIT_MESH' else None
 
     for obj in context.selected_objects:
         if obj.type != "MESH":

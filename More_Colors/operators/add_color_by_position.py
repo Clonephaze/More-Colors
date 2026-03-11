@@ -26,6 +26,7 @@ class MC_OT_add_color_by_position(BaseColorOperator):
         tool = context.scene.more_colors_color_by_position_tool
         mask = context.scene.more_colors_global_color_settings.get_mask()
         color_ramp = self._get_color_ramp(context)
+        select_mode = context.tool_settings.mesh_select_mode if context.mode == 'EDIT_MESH' else None
 
         any_applied = False
         for obj in context.selected_objects:
@@ -35,7 +36,7 @@ class MC_OT_add_color_by_position(BaseColorOperator):
                 values = self._compute_values(obj, tool, context)
                 if values is None:
                     continue
-                self._apply_gradient(obj, values, color_ramp, mask)
+                self._apply_gradient(obj, values, color_ramp, mask, select_mode)
                 any_applied = True
 
         if not any_applied:
@@ -167,18 +168,65 @@ class MC_OT_add_color_by_position(BaseColorOperator):
         return [(v - min_val) / val_range for v in raw]
 
     @staticmethod
-    def _apply_gradient(obj, values, color_ramp, mask):
+    def _apply_gradient(obj, values, color_ramp, mask, select_mode):
         color_attribute = get_active_color_attribute(obj)
+
+        # Object-mode fast path: apply to all elements
+        if select_mode is None:
+            match color_attribute.domain:
+                case "CORNER":
+                    vert_to_loops = build_vertex_loop_map(obj)
+                    for vert in obj.data.vertices:
+                        color = color_ramp.evaluate(values[vert.index])
+                        for loop_index in vert_to_loops.get(vert.index, []):
+                            data = color_attribute.data[loop_index]
+                            data.color_srgb = get_masked_color(data.color_srgb, color, mask)
+                case "POINT":
+                    for vert in obj.data.vertices:
+                        color = color_ramp.evaluate(values[vert.index])
+                        data = color_attribute.data[vert.index]
+                        data.color_srgb = get_masked_color(data.color_srgb, color, mask)
+            obj.data.update()
+            return
+
+        # Edit-mode: respect selection
         match color_attribute.domain:
             case "CORNER":
                 vert_to_loops = build_vertex_loop_map(obj)
-                for vert in obj.data.vertices:
-                    color = color_ramp.evaluate(values[vert.index])
-                    for loop_index in vert_to_loops.get(vert.index, []):
-                        data = color_attribute.data[loop_index]
-                        data.color_srgb = get_masked_color(data.color_srgb, color, mask)
+
+                if select_mode[0]:  # Vertex
+                    for vert in obj.data.vertices:
+                        if not vert.select:
+                            continue
+                        color = color_ramp.evaluate(values[vert.index])
+                        for loop_index in vert_to_loops.get(vert.index, []):
+                            data = color_attribute.data[loop_index]
+                            data.color_srgb = get_masked_color(data.color_srgb, color, mask)
+
+                if select_mode[1]:  # Edge
+                    for edge in obj.data.edges:
+                        if not edge.select:
+                            continue
+                        for vi in edge.vertices:
+                            color = color_ramp.evaluate(values[vi])
+                            for loop_index in vert_to_loops.get(vi, []):
+                                data = color_attribute.data[loop_index]
+                                data.color_srgb = get_masked_color(data.color_srgb, color, mask)
+
+                if select_mode[2]:  # Face
+                    for poly in obj.data.polygons:
+                        if not poly.select:
+                            continue
+                        for loop_index in poly.loop_indices:
+                            vi = obj.data.loops[loop_index].vertex_index
+                            color = color_ramp.evaluate(values[vi])
+                            data = color_attribute.data[loop_index]
+                            data.color_srgb = get_masked_color(data.color_srgb, color, mask)
+
             case "POINT":
                 for vert in obj.data.vertices:
+                    if not vert.select:
+                        continue
                     color = color_ramp.evaluate(values[vert.index])
                     data = color_attribute.data[vert.index]
                     data.color_srgb = get_masked_color(data.color_srgb, color, mask)

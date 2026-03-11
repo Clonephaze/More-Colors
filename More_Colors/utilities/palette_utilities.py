@@ -60,7 +60,15 @@ def get_or_create_default_palette():
     palette = bpy.data.palettes.get(DEFAULT_PALETTE_NAME)
     if not palette:
         palette = bpy.data.palettes.new(DEFAULT_PALETTE_NAME)
-        for color in _DEFAULT_COLORS:
+        # Try to read colors from preferences
+        prefs_colors = None
+        try:
+            from ..preferences import get_default_palette_colors
+            prefs_colors = get_default_palette_colors()
+        except (ImportError, KeyError):
+            pass
+        colors = prefs_colors if prefs_colors else _DEFAULT_COLORS
+        for color in colors:
             pc = palette.colors.new()
             pc.color = color
     return palette
@@ -90,6 +98,7 @@ def cleanup_previews():
     _preset_previews.clear()
 
 
+@bpy.app.handlers.persistent
 def _assign_default_palettes(_=None):
     """Assign default palette to tools that don't have one set.
 
