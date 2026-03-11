@@ -3,7 +3,9 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from bpy.props import EnumProperty, FloatProperty, IntProperty, StringProperty
+import math
+
+from bpy.props import BoolProperty, EnumProperty, FloatProperty, IntProperty, StringProperty
 from bpy.types import PropertyGroup
 
 
@@ -17,6 +19,7 @@ class ColorByPositionToolProperties(PropertyGroup):
             ("NOISE", "Noise", "Perlin noise pattern", "FORCE_TURBULENCE", 3),
             ("CURVATURE", "Curvature", "Surface curvature (convex vs concave)", "SMOOTHCURVE", 4),
             ("WEIGHT", "Weight", "Active vertex group weights", "GROUP_VERTEX", 5),
+            ("DIRTY", "Dirty Vertex Colors", "Cavity/occlusion based on vertex normals", "SHADING_RENDERED", 6),
         ],
         default="POSITION",
     )
@@ -77,6 +80,52 @@ class ColorByPositionToolProperties(PropertyGroup):
         description="Random seed for the noise offset",
         default=0,
         min=0,
+    )
+
+    dirt_blur_iterations: IntProperty(
+        name="Blur",
+        description="Number of blur passes to smooth the dirt values",
+        default=1,
+        min=0,
+        max=40,
+    )
+
+    dirt_blur_strength: FloatProperty(
+        name="Blur Strength",
+        description="How strongly each blur pass blends with neighbors",
+        default=1.0,
+        min=0.0,
+        max=1.0,
+    )
+
+    dirt_highlight_angle: FloatProperty(
+        name="Highlight Angle",
+        description="Edges sharper than this angle are considered fully clean",
+        default=math.pi,
+        min=0.0,
+        max=math.pi,
+        subtype="ANGLE",
+    )
+
+    dirt_dirt_angle: FloatProperty(
+        name="Dirt Angle",
+        description="Crevices tighter than this angle are considered fully dirty",
+        default=0.0,
+        min=0.0,
+        max=math.pi,
+        subtype="ANGLE",
+    )
+
+    dirt_only_dirty: BoolProperty(
+        name="Dirty Only",
+        description="Only color dirty/concave areas, leave clean areas unchanged",
+        default=False,
+    )
+
+    dirt_normalize: BoolProperty(
+        name="Normalize",
+        description="Remap results to use the full 0\u20131 range of the color ramp",
+        default=True,
     )
 
     color_ramp_material_name: StringProperty(

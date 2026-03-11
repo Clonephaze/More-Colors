@@ -61,6 +61,8 @@ class MC_OT_add_color_by_position(BaseColorOperator):
                 return self._curvature_values(obj)
             case "WEIGHT":
                 return self._weight_values(obj)
+            case "DIRTY":
+                return self._dirty_values(obj, tool)
 
     # ---- Per-source value computation ----
 
@@ -173,6 +175,88 @@ class MC_OT_add_color_by_position(BaseColorOperator):
             except RuntimeError:
                 pass
         return values
+
+    @staticmethod
+    def _dirty_values(obj, tool):
+        """Compute per-vertex dirt (cavity/occlusion) values.
+
+        For each vertex, compares its normal against the direction to each
+        neighbor.  Concave areas (crevices) score high, convex (exposed)
+        areas score low.  Optional blur passes smooth the result.
+        """
+        mesh = obj.data
+        n = len(mesh.vertices)
+
+        coords = np.empty(n * 3, dtype=np.float64)
+        mesh.vertices.foreach_get("co", coords)
+        coords = coords.reshape(n, 3)
+
+        normals = np.empty(n * 3, dtype=np.float64)
+        mesh.vertices.foreach_get("normal", normals)
+        normals = normals.reshape(n, 3)
+
+        # Edge pair arrays
+        n_edges = len(mesh.edges)
+        edge_verts = np.empty(n_edges * 2, dtype=np.int32)
+        mesh.edges.foreach_get("vertices", edge_verts)
+        v0 = edge_verts[0::2]
+        v1 = edge_verts[1::2]
+
+        # For each edge, compute how much the vertex normal points toward
+        # the neighbor.  dot(normal, normalize(neighbor - self)):
+        #   positive = neighbor is "above" (convex/clean)
+        #   negative = neighbor is "below" (concave/dirty)
+        d01 = coords[v1] - coords[v0]  # direction v0 -> v1
+        d10 = -d01                       # direction v1 -> v0
+        len01 = np.linalg.norm(d01, axis=1, keepdims=True)
+        len01 = np.maximum(len01, 1e-12)  # avoid /0
+        d01 /= len01
+        d10 /= len01
+
+        # dot products: how much each vertex normal faces toward its neighbor
+        dot_v0 = np.sum(normals[v0] * d01, axis=1)  # v0 looking toward v1
+        dot_v1 = np.sum(normals[v1] * d10, axis=1)  # v1 looking toward v0
+
+        # Accumulate per-vertex average dot
+        dirt_sum = np.zeros(n, dtype=np.float64)
+        dirt_count = np.zeros(n, dtype=np.float64)
+        np.add.at(dirt_sum, v0, dot_v0)
+        np.add.at(dirt_sum, v1, dot_v1)
+        np.add.at(dirt_count, v0, 1)
+        np.add.at(dirt_count, v1, 1)
+
+        has_neighbors = dirt_count > 0
+        avg_dot = np.zeros(n, dtype=np.float64)
+        avg_dot[has_neighbors] = dirt_sum[has_neighbors] / dirt_count[has_neighbors]
+
+        # Map: positive dot (concave crevice → neighbor below normal) = dirty.
+        # Remap with angle thresholds:
+        #   dirt_angle  → below this dot the vertex is fully dirty (1.0)
+        #   highlight_angle → above this dot the vertex is fully clean (0.0)
+        dirt_cos = np.cos(tool.dirt_dirt_angle)
+        high_cos = np.cos(tool.dirt_highlight_angle)
+        # avg_dot range is roughly [-1, 1].  Concave → positive, convex → negative.
+        # Map so that high positive = 1 (dirty) and low/negative = 0 (clean).
+        if abs(high_cos - dirt_cos) > 1e-12:
+            values = np.clip((avg_dot - dirt_cos) / (high_cos - dirt_cos), 0.0, 1.0)
+        else:
+            values = np.where(avg_dot >= dirt_cos, 1.0, 0.0)
+
+        if tool.dirt_only_dirty:
+            values = np.clip(values, 0.5, 1.0)
+            values = (values - 0.5) * 2.0
+
+        # Optional blur passes (reuse edge adjacency)
+        strength = tool.dirt_blur_strength
+        for _ in range(tool.dirt_blur_iterations):
+            neighbor_sum = np.zeros(n, dtype=np.float64)
+            np.add.at(neighbor_sum, v0, values[v1])
+            np.add.at(neighbor_sum, v1, values[v0])
+            avg = np.zeros(n, dtype=np.float64)
+            avg[has_neighbors] = neighbor_sum[has_neighbors] / dirt_count[has_neighbors]
+            values = np.where(has_neighbors, values + (avg - values) * strength, values)
+
+        return MC_OT_add_color_by_position._normalize_np(values) if tool.dirt_normalize else values
 
     # ---- Shared helpers ----
 

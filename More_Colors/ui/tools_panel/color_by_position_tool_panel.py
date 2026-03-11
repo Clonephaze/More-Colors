@@ -43,6 +43,14 @@ class MC_PT_color_by_position_tool_panel(BasePanelInfo, Panel):
             case "CURVATURE":
                 pass
 
+            case "DIRTY":
+                layout.prop(tool, "dirt_highlight_angle")
+                layout.prop(tool, "dirt_dirt_angle")
+                layout.prop(tool, "dirt_blur_iterations")
+                layout.prop(tool, "dirt_blur_strength")
+                layout.prop(tool, "dirt_only_dirty")
+                layout.prop(tool, "dirt_normalize")
+
             case "WEIGHT":
                 obj = context.active_object
                 if obj and obj.type == "MESH" and obj.vertex_groups.active:
