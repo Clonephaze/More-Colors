@@ -79,11 +79,64 @@ class ColorByPositionToolProperties(PropertyGroup):
         max=16,
     )
 
+    noise_basis: EnumProperty(
+        name="Basis",
+        description="Underlying noise algorithm",
+        items=[
+            ("PERLIN_ORIGINAL", "Perlin (Original)", ""),
+            ("PERLIN_NEW", "Perlin (Improved)", ""),
+            ("VORONOI_F1", "Voronoi F1", ""),
+            ("VORONOI_F2", "Voronoi F2", ""),
+            ("VORONOI_F2F1", "Voronoi F2-F1", ""),
+            ("VORONOI_CRACKLE", "Voronoi Crackle", ""),
+            ("CELLNOISE", "Cell Noise", ""),
+            ("BLENDER", "Blender", ""),
+        ],
+        default="PERLIN_ORIGINAL",
+    )
+
+    noise_type: EnumProperty(
+        name="Type",
+        description="Noise fractal variation",
+        items=[
+            ("FBM", "fBm", "Fractal Brownian motion"),
+            ("MULTIFRACTAL", "Multifractal", "Multiplicative multifractal"),
+            ("RIDGED", "Ridged", "Sharp ridged multifractal"),
+            ("HETERO", "Hetero Terrain", "Heterogeneous terrain"),
+            ("TURBULENCE", "Turbulence", "Absolute-value turbulence"),
+        ],
+        default="FBM",
+    )
+
     noise_seed: IntProperty(
         name="Seed",
         description="Random seed for the noise offset",
         default=0,
         min=0,
+    )
+
+    noise_roughness: FloatProperty(
+        name="Roughness",
+        description="Controls how much high-frequency octaves contribute (H parameter)",
+        default=1.0,
+        min=0.0,
+        soft_max=2.0,
+    )
+
+    noise_lacunarity: FloatProperty(
+        name="Lacunarity",
+        description="Gap between successive noise frequencies",
+        default=2.0,
+        min=0.01,
+        soft_max=6.0,
+    )
+
+    noise_distortion: FloatProperty(
+        name="Distortion",
+        description="Amount of domain warping applied to the noise",
+        default=0.0,
+        min=0.0,
+        soft_max=10.0,
     )
 
     dirt_blur_iterations: IntProperty(

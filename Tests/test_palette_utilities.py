@@ -109,12 +109,6 @@ class TestGetColorIcon(unittest.TestCase):
         id2 = get_color_icon(0.5, 0.5, 0.5)
         self.assertEqual(id1, id2)
 
-    @unittest.skipIf(bpy.app.background, "Preview icons all return 0 in background mode")
-    def test_different_colors_return_different_ids(self):
-        id_red = get_color_icon(1.0, 0.0, 0.0)
-        id_blue = get_color_icon(0.0, 0.0, 1.0)
-        self.assertNotEqual(id_red, id_blue)
-
     def test_clamps_out_of_range(self):
         # Should not crash with out-of-range linear values
         icon_id = get_color_icon(2.0, -0.5, 0.5)

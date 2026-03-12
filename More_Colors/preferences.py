@@ -129,6 +129,25 @@ _DISTANCE_ORIGIN_ITEMS = [
     ("WORLD", "World Origin", ""),
 ]
 
+_NOISE_BASIS_ITEMS = [
+    ("PERLIN_ORIGINAL", "Perlin (Original)", ""),
+    ("PERLIN_NEW", "Perlin (Improved)", ""),
+    ("VORONOI_F1", "Voronoi F1", ""),
+    ("VORONOI_F2", "Voronoi F2", ""),
+    ("VORONOI_F2F1", "Voronoi F2-F1", ""),
+    ("VORONOI_CRACKLE", "Voronoi Crackle", ""),
+    ("CELLNOISE", "Cell Noise", ""),
+    ("BLENDER", "Blender", ""),
+]
+
+_NOISE_TYPE_ITEMS = [
+    ("FBM", "fBm", ""),
+    ("MULTIFRACTAL", "Multifractal", ""),
+    ("RIDGED", "Ridged", ""),
+    ("HETERO", "Hetero Terrain", ""),
+    ("TURBULENCE", "Turbulence", ""),
+]
+
 _SMOOTH_CONSTRAINT_ITEMS = [
     ("NONE", "None", ""),
     ("SHARP", "Sharp Edges", ""),
@@ -241,6 +260,34 @@ class MoreColorsPreferences(AddonPreferences):
         name="Seed",
         default=0,
         min=0,
+    )
+    default_noise_basis: EnumProperty(
+        name="Basis",
+        items=_NOISE_BASIS_ITEMS,
+        default="PERLIN_ORIGINAL",
+    )
+    default_noise_type: EnumProperty(
+        name="Type",
+        items=_NOISE_TYPE_ITEMS,
+        default="FBM",
+    )
+    default_noise_roughness: FloatProperty(
+        name="Roughness",
+        default=1.0,
+        min=0.0,
+        soft_max=2.0,
+    )
+    default_noise_lacunarity: FloatProperty(
+        name="Lacunarity",
+        default=2.0,
+        min=0.01,
+        soft_max=6.0,
+    )
+    default_noise_distortion: FloatProperty(
+        name="Distortion",
+        default=0.0,
+        min=0.0,
+        soft_max=10.0,
     )
     default_normalize_per_island: BoolProperty(
         name="Normalize Per Island",
@@ -358,7 +405,12 @@ class MoreColorsPreferences(AddonPreferences):
             box.label(text="Noise Parameters:")
             box.prop(self, "default_noise_scale")
             box.prop(self, "default_noise_detail")
+            box.prop(self, "default_noise_basis")
+            box.prop(self, "default_noise_type")
             box.prop(self, "default_noise_seed")
+            box.prop(self, "default_noise_roughness")
+            box.prop(self, "default_noise_lacunarity")
+            box.prop(self, "default_noise_distortion")
             box.separator()
             box.prop(self, "default_normalize_per_island")
 
@@ -490,6 +542,11 @@ def _apply_startup_defaults(_=None):
         gradient_tool.noise_scale = prefs.default_noise_scale
         gradient_tool.noise_detail = prefs.default_noise_detail
         gradient_tool.noise_seed = prefs.default_noise_seed
+        gradient_tool.noise_basis = prefs.default_noise_basis
+        gradient_tool.noise_type = prefs.default_noise_type
+        gradient_tool.noise_roughness = prefs.default_noise_roughness
+        gradient_tool.noise_lacunarity = prefs.default_noise_lacunarity
+        gradient_tool.noise_distortion = prefs.default_noise_distortion
         gradient_tool.normalize_per_island = prefs.default_normalize_per_island
 
     # Smooth

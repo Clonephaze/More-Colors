@@ -38,7 +38,18 @@ class MC_PT_color_by_position_tool_panel(BasePanelInfo, Panel):
                 row.prop(tool, "space_type", expand=True)
                 layout.prop(tool, "noise_scale")
                 layout.prop(tool, "noise_detail")
-                layout.prop(tool, "noise_seed")
+                layout.prop(tool, "noise_basis")
+
+                header, body = layout.panel(
+                    "MC_PT_noise_advanced", default_closed=True
+                )
+                header.label(text="Advanced")
+                if body:
+                    body.prop(tool, "noise_type")
+                    body.prop(tool, "noise_roughness")
+                    body.prop(tool, "noise_lacunarity")
+                    body.prop(tool, "noise_distortion")
+                    body.prop(tool, "noise_seed")
 
             case "CURVATURE":
                 layout.prop(tool, "curvature_use_cotangent")

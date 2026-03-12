@@ -8,7 +8,14 @@ from random import Random
 import bpy
 import numpy as np
 from mathutils import Vector
-from mathutils.noise import fractal as noise_fractal
+from mathutils.noise import (
+    fractal as noise_fractal,
+    multi_fractal as noise_multi_fractal,
+    ridged_multi_fractal as noise_ridged,
+    hetero_terrain as noise_hetero,
+    turbulence as noise_turbulence,
+    variable_lacunarity as noise_variable_lacunarity,
+)
 
 from .base_operators import BaseColorOperator, BaseOperator
 from ..utilities.color_utilities import (
@@ -130,12 +137,42 @@ class MC_OT_add_color_by_position(BaseColorOperator):
         scale = tool.noise_scale
         octaves = tool.noise_detail + 1
         use_world = (tool.space_type == "World")
+        basis = tool.noise_basis
+        H = tool.noise_roughness
+        lac = tool.noise_lacunarity
+        distortion = tool.noise_distortion
+        noise_type = tool.noise_type
 
         coords = self._get_coords(obj, use_world)
         n = len(coords)
         raw = np.empty(n, dtype=np.float64)
         for i in range(n):
-            raw[i] = noise_fractal(Vector(coords[i]) * scale + offset, 1.0, 2.0, octaves)
+            pos = Vector(coords[i]) * scale + offset
+            if distortion > 0.0:
+                pos = Vector((
+                    pos.x + noise_variable_lacunarity(pos, distortion) * distortion,
+                    pos.y + noise_variable_lacunarity(
+                        Vector((pos.y, pos.z, pos.x)), distortion
+                    ) * distortion,
+                    pos.z + noise_variable_lacunarity(
+                        Vector((pos.z, pos.x, pos.y)), distortion
+                    ) * distortion,
+                ))
+
+            match noise_type:
+                case "FBM":
+                    raw[i] = noise_fractal(pos, H, lac, octaves, noise_basis=basis)
+                case "MULTIFRACTAL":
+                    raw[i] = noise_multi_fractal(pos, H, lac, octaves, noise_basis=basis)
+                case "RIDGED":
+                    raw[i] = noise_ridged(pos, H, lac, octaves, 1.0, 2.0, noise_basis=basis)
+                case "HETERO":
+                    raw[i] = noise_hetero(pos, H, lac, octaves, 1.0, noise_basis=basis)
+                case "TURBULENCE":
+                    raw[i] = noise_turbulence(
+                        pos, octaves, False, noise_basis=basis,
+                        amplitude_scale=0.5, frequency_scale=lac,
+                    )
         return self._normalize_np(raw)
 
     @staticmethod
@@ -486,9 +523,6 @@ class MC_OT_add_color_by_position(BaseColorOperator):
         # Accumulate cotangent weights per edge from each adjacent face.
         cot_weight = np.zeros(n_edges, dtype=np.float64)
         cot_count = np.zeros(n_edges, dtype=np.int32)
-
-        # Map loops to faces
-        loop_face = np.repeat(np.arange(n_polys, dtype=np.int32), loop_totals)
 
         # For each loop, get the edge it belongs to and the opposite tip vertex.
         # The "opposite" for a loop with edge (A,B) is the vertex at the tip
