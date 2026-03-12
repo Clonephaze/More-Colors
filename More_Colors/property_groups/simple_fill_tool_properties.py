@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import bpy
-from bpy.props import FloatVectorProperty, IntProperty, PointerProperty
+from bpy.props import BoolProperty, FloatVectorProperty, IntProperty, PointerProperty
 from bpy.types import PropertyGroup
 
 
@@ -28,4 +28,10 @@ class SimpleFillToolProperties(PropertyGroup):
     active_preset_index: IntProperty(
         name="Active Preset Index",
         default=0,
+    )
+
+    quick_fill: BoolProperty(
+        name="Quick Fill",
+        description="When enabled, clicking a palette swatch immediately fills the object with that color",
+        default=False,
     )

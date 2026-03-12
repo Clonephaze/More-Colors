@@ -5,7 +5,7 @@
 import bpy
 from bpy.props import (
     BoolProperty, CollectionProperty, EnumProperty,
-    FloatProperty, FloatVectorProperty, IntProperty,
+    FloatProperty, FloatVectorProperty, IntProperty, StringProperty,
 )
 from bpy.types import AddonPreferences, PropertyGroup
 
@@ -183,14 +183,62 @@ _SYMMETRIZE_DIRECTION_ITEMS = [
 
 
 # ---------------------------------------------------------------------------
+# Keyboard Shortcuts Modal
+# ---------------------------------------------------------------------------
+
+class ShortcutEntry(PropertyGroup):
+    idname: StringProperty(name="Operator ID")
+
+
+class MC_OT_show_keybinds(bpy.types.Operator):
+    """Show available keyboard shortcut operators"""
+
+    bl_label = "Keyboard Shortcuts"
+    bl_idname = "morecolors.show_keybinds"
+    bl_options = {'REGISTER'}
+
+    def invoke(self, context, event):
+        entries = context.window_manager.mc_shortcut_entries
+        entries.clear()
+        for op_label, idname in _SHORTCUT_OPERATORS:
+            entry = entries.add()
+            entry.name = op_label
+            entry.idname = idname
+        return context.window_manager.invoke_popup(self, width=480)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="Right-click any button in the More Colors panel", icon='INFO')
+        layout.label(text='and choose "Assign Shortcut" to bind a key.')
+        layout.separator()
+        layout.label(text="Available operators for manual context aware assignment:")
+        for entry in context.window_manager.mc_shortcut_entries:
+            row = layout.row(align=True)
+            row.label(text=entry.name, icon='DOT')
+            row.prop(entry, "idname", text="")
+
+    def execute(self, context):
+        return {'FINISHED'}
+
+
+# ---------------------------------------------------------------------------
 # Addon Preferences
 # ---------------------------------------------------------------------------
 
 class MoreColorsPreferences(AddonPreferences):
     bl_idname = __package__
 
+    # -- Active tab --
+    active_tab: EnumProperty(
+        items=[
+            ("GENERAL", "General", "Global defaults and palette"),
+            ("PAINT", "Paint Tools", "Fill, Randomize, Gradient, and Selection defaults"),
+            ("ADJUST", "Adjust Tools", "Smooth, Adjustments, Transfer, and Symmetrize defaults"),
+        ],
+        default="GENERAL",
+    )
+
     # -- Section toggles --
-    show_keybinds: BoolProperty(name="Keyboard Shortcuts", default=False)
     show_fill: BoolProperty(name="Fill Defaults", default=False)
     show_randomize: BoolProperty(name="Randomize Defaults", default=False)
     show_gradient: BoolProperty(name="Gradient Defaults", default=False)
@@ -209,6 +257,11 @@ class MoreColorsPreferences(AddonPreferences):
         min=0.0,
         max=1.0,
         size=4,
+    )
+    default_quick_fill: BoolProperty(
+        name="Quick Fill",
+        description="When enabled, clicking a palette swatch immediately fills the object with that color",
+        default=False,
     )
 
     # -- Randomize defaults --
@@ -379,115 +432,105 @@ class MoreColorsPreferences(AddonPreferences):
 
     def draw(self, context):
         layout = self.layout
+        row = layout.row(align=True)
+        row.scale_y = 1.6
+        row.prop_enum(self, "active_tab", "GENERAL", icon="SETTINGS")
+        row.prop_enum(self, "active_tab", "PAINT", icon="BRUSH_DATA")
+        row.prop_enum(self, "active_tab", "ADJUST", icon="MODIFIER")
+        layout.separator(factor=0.5)
 
-        # -- Fill Defaults --
-        self._draw_section_header(layout, "show_fill", "BRUSH_DATA", "Fill Defaults")
-        if self.show_fill:
-            box = layout.box()
-            box.prop(self, "default_fill_color")
+        if self.active_tab == "GENERAL":
+            self._draw_section_header(layout, "show_mask", "COLOR", "Color Mask Defaults")
+            if self.show_mask:
+                box = layout.box()
+                row = box.row(align=True)
+                row.prop(self, "default_mask_r", toggle=True)
+                row.prop(self, "default_mask_g", toggle=True)
+                row.prop(self, "default_mask_b", toggle=True)
+                row.prop(self, "default_mask_a", toggle=True)
 
-        # -- Randomize Defaults --
-        self._draw_section_header(layout, "show_randomize", "SHADERFX", "Randomize Defaults")
-        if self.show_randomize:
-            box = layout.box()
-            box.prop(self, "default_random_element_type")
-            box.prop(self, "default_random_color_mode")
+            self._draw_section_header(layout, "show_palette", "PALETTE", "Default Palette")
+            if self.show_palette:
+                box = layout.box()
+                colors = self.default_palette_colors
+                if len(colors) > 0:
+                    for i, pc in enumerate(colors):
+                        if i % SWATCH_COLS == 0:
+                            row = box.row(align=True)
+                            row.alignment = 'LEFT'
+                        icon_id = get_color_icon(*pc.color)
+                        row.prop(pc, "color", text="", icon_value=icon_id)
+                row = box.row(align=True)
+                row.operator("morecolors.add_default_palette_color", icon="ADD", text="")
+                if len(colors) > 0:
+                    row.operator("morecolors.remove_default_palette_color", icon="REMOVE", text="")
 
-        # -- Gradient Defaults --
-        self._draw_section_header(layout, "show_gradient", "COLORSET_08_VEC", "Gradient Defaults")
-        if self.show_gradient:
-            box = layout.box()
-            box.prop(self, "default_gradient_source")
-            box.prop(self, "default_gradient_space")
-            box.prop(self, "default_gradient_direction")
-            box.prop(self, "default_distance_origin")
-            box.separator()
-            box.label(text="Noise Parameters:")
-            box.prop(self, "default_noise_scale")
-            box.prop(self, "default_noise_detail")
-            box.prop(self, "default_noise_basis")
-            box.prop(self, "default_noise_type")
-            box.prop(self, "default_noise_seed")
-            box.prop(self, "default_noise_roughness")
-            box.prop(self, "default_noise_lacunarity")
-            box.prop(self, "default_noise_distortion")
-            box.separator()
-            box.prop(self, "default_normalize_per_island")
+            layout.separator(factor=0.5)
+            layout.operator("morecolors.show_keybinds", text="Keyboard Shortcuts", icon="QUESTION")
 
-        # -- Smooth Defaults --
-        self._draw_section_header(layout, "show_smooth", "SMOOTHCURVE", "Smooth Defaults")
-        if self.show_smooth:
-            box = layout.box()
-            box.prop(self, "default_smooth_constraint")
-            box.prop(self, "default_smooth_iterations")
-            box.prop(self, "default_smooth_factor", slider=True)
+        elif self.active_tab == "PAINT":
+            self._draw_section_header(layout, "show_fill", "BRUSH_DATA", "Fill Defaults")
+            if self.show_fill:
+                box = layout.box()
+                box.prop(self, "default_fill_color")
+                box.prop(self, "default_quick_fill")
 
-        # -- Color Adjustments Defaults --
-        self._draw_section_header(layout, "show_adjustments", "BRUSH_DATA", "Color Adjustments Defaults")
-        if self.show_adjustments:
-            box = layout.box()
-            box.prop(self, "default_adjustment_operation")
+            self._draw_section_header(layout, "show_randomize", "SHADERFX", "Randomize Defaults")
+            if self.show_randomize:
+                box = layout.box()
+                box.prop(self, "default_random_element_type")
+                box.prop(self, "default_random_color_mode")
 
-        # -- Attribute Transfer Defaults --
-        self._draw_section_header(layout, "show_transfer", "BRUSH_DATA", "Transfer Defaults")
-        if self.show_transfer:
-            box = layout.box()
-            box.prop(self, "default_transfer_mode")
+            self._draw_section_header(layout, "show_gradient", "COLORSET_08_VEC", "Gradient Defaults")
+            if self.show_gradient:
+                box = layout.box()
+                box.prop(self, "default_gradient_source")
+                box.prop(self, "default_gradient_space")
+                box.prop(self, "default_gradient_direction")
+                box.prop(self, "default_distance_origin")
+                box.separator()
+                box.label(text="Noise Parameters:")
+                box.prop(self, "default_noise_scale")
+                box.prop(self, "default_noise_detail")
+                box.prop(self, "default_noise_basis")
+                box.prop(self, "default_noise_type")
+                box.prop(self, "default_noise_seed")
+                box.prop(self, "default_noise_roughness")
+                box.prop(self, "default_noise_lacunarity")
+                box.prop(self, "default_noise_distortion")
+                box.separator()
+                box.prop(self, "default_normalize_per_island")
 
-        # -- Symmetrize Defaults --
-        self._draw_section_header(layout, "show_symmetrize", "MOD_MIRROR", "Symmetrize Defaults")
-        if self.show_symmetrize:
-            box = layout.box()
-            box.prop(self, "default_symmetrize_axis")
-            box.prop(self, "default_symmetrize_direction")
-            box.prop(self, "default_symmetrize_threshold")
+            self._draw_section_header(layout, "show_selection", "RESTRICT_SELECT_OFF", "Color By Selection Defaults")
+            if self.show_selection:
+                box = layout.box()
+                box.prop(self, "default_selection_selected_color")
+                box.prop(self, "default_selection_unselected_color")
 
-        # -- Selection Defaults --
-        self._draw_section_header(layout, "show_selection", "RESTRICT_SELECT_OFF", "Selection Defaults")
-        if self.show_selection:
-            box = layout.box()
-            box.prop(self, "default_selection_selected_color")
-            box.prop(self, "default_selection_unselected_color")
+        elif self.active_tab == "ADJUST":
+            self._draw_section_header(layout, "show_smooth", "SMOOTHCURVE", "Smooth Defaults")
+            if self.show_smooth:
+                box = layout.box()
+                box.prop(self, "default_smooth_constraint")
+                box.prop(self, "default_smooth_iterations")
+                box.prop(self, "default_smooth_factor", slider=True)
 
-        # -- Color Mask Defaults --
-        self._draw_section_header(layout, "show_mask", "COLOR", "Color Mask Defaults")
-        if self.show_mask:
-            box = layout.box()
-            row = box.row(align=True)
-            row.prop(self, "default_mask_r", toggle=True)
-            row.prop(self, "default_mask_g", toggle=True)
-            row.prop(self, "default_mask_b", toggle=True)
-            row.prop(self, "default_mask_a", toggle=True)
+            self._draw_section_header(layout, "show_adjustments", "BRUSH_DATA", "Color Adjustments Defaults")
+            if self.show_adjustments:
+                box = layout.box()
+                box.prop(self, "default_adjustment_operation")
 
-        # -- Default Palette --
-        self._draw_section_header(layout, "show_palette", "PALETTE", "Default Palette")
-        if self.show_palette:
-            box = layout.box()
-            colors = self.default_palette_colors
-            if len(colors) > 0:
-                for i, pc in enumerate(colors):
-                    if i % SWATCH_COLS == 0:
-                        row = box.row(align=True)
-                        row.alignment = 'LEFT'
-                    icon_id = get_color_icon(*pc.color)
-                    row.prop(pc, "color", text="", icon_value=icon_id)
-            row = box.row(align=True)
-            row.operator("morecolors.add_default_palette_color", icon="ADD", text="")
-            if len(colors) > 0:
-                row.operator("morecolors.remove_default_palette_color", icon="REMOVE", text="")
+            self._draw_section_header(layout, "show_transfer", "BRUSH_DATA", "Transfer Defaults")
+            if self.show_transfer:
+                box = layout.box()
+                box.prop(self, "default_transfer_mode")
 
-        # -- Keyboard Shortcuts --
-        self._draw_section_header(layout, "show_keybinds", "KEYINGSET", "Keyboard Shortcuts")
-        if self.show_keybinds:
-            box = layout.box()
-            box.label(text="Right-click any button in the More Colors panel", icon='INFO')
-            box.label(text="and choose \"Assign Shortcut\" to bind a key.")
-            box.separator()
-            box.label(text="Available operators:")
-            for label, idname in _SHORTCUT_OPERATORS:
-                row = box.row()
-                row.label(text=label, icon='DOT')
-                row.label(text=idname)
+            self._draw_section_header(layout, "show_symmetrize", "MOD_MIRROR", "Symmetrize Defaults")
+            if self.show_symmetrize:
+                box = layout.box()
+                box.prop(self, "default_symmetrize_axis")
+                box.prop(self, "default_symmetrize_direction")
+                box.prop(self, "default_symmetrize_threshold")
 
     @staticmethod
     def _draw_section_header(layout, prop_name, icon, label):
@@ -525,6 +568,7 @@ def _apply_startup_defaults(_=None):
     fill_tool = getattr(scene, "more_colors_simple_fill_tool", None)
     if fill_tool:
         fill_tool.selected_color = prefs.default_fill_color
+        fill_tool.quick_fill = prefs.default_quick_fill
 
     # Randomize
     random_tool = getattr(scene, "more_colors_random_color_tool", None)
@@ -609,8 +653,10 @@ def get_default_palette_colors():
 
 classes = [
     DefaultPaletteColor,
+    ShortcutEntry,
     MC_OT_add_default_palette_color,
     MC_OT_remove_default_palette_color,
+    MC_OT_show_keybinds,
     MoreColorsPreferences,
 ]
 
@@ -631,9 +677,11 @@ def _populate_default_palette():
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
+    bpy.types.WindowManager.mc_shortcut_entries = CollectionProperty(type=ShortcutEntry)
     bpy.app.timers.register(_populate_default_palette, first_interval=0)
 
 
 def unregister():
+    del bpy.types.WindowManager.mc_shortcut_entries
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)

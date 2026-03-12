@@ -33,7 +33,9 @@ class MC_PT_simple_fill_tool_panel(BasePanelInfo, Panel):
 
         # --- Palette selector ---
         box = layout.box()
-        box.label(text="Color Presets", icon="COLOR")
+        header_row = box.row(align=False)
+        header_row.label(text="Color Presets", icon="COLOR")
+        header_row.prop(tool, "quick_fill", text="Quick Fill", toggle=True, icon="PLAY")
         row = box.row(align=True)
         row.prop(tool, "preset_palette", text="")
         row.operator("morecolors.new_palette", icon="FILE_NEW", text="")

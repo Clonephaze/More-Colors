@@ -124,7 +124,7 @@ class MC_OT_new_palette(BaseOperator):
 
 
 class MC_OT_use_preset_color(BaseOperator):
-    """Selects this preset and sets it as the active color"""
+    """Selects this preset and sets it as the active color. With Quick Fill enabled, also immediately fills the object."""
 
     bl_label = "Use Preset Color"
     bl_idname = "morecolors.use_preset_color"
@@ -142,4 +142,12 @@ class MC_OT_use_preset_color(BaseOperator):
         simple_fill_tool.selected_color[1] = color[1]
         simple_fill_tool.selected_color[2] = color[2]
         simple_fill_tool.active_preset_index = self.index
+
+        if simple_fill_tool.quick_fill:
+            success, msg = execute_simple_fill(context)
+            if not success:
+                self.report({"ERROR"}, msg)
+                return {"CANCELLED"}
+            self.report({"INFO"}, msg)
+
         return {"FINISHED"}
