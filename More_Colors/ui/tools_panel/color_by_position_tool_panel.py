@@ -64,6 +64,8 @@ class MC_PT_color_by_position_tool_panel(BasePanelInfo, Panel):
             case "VALENCE" | "FACE_AREA" | "EDGE_LENGTH_VAR" | "FACE_QUALITY":
                 pass
 
+        layout.prop(tool, "normalize_per_island")
+
         material = bpy.data.materials.get(tool.color_ramp_material_name)
         if material is not None:
             node = material.node_tree.nodes['Color Ramp']

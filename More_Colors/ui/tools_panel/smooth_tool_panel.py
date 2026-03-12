@@ -10,9 +10,9 @@ from ..base_panel_info import BasePanelInfo
 class MC_PT_smooth_tool_panel(BasePanelInfo, Panel):
     bl_label = "Smooth"
     bl_idname = "MC_PT_smooth_tool_panel"
-    bl_parent_id = "MC_PT_tools_panel"
+    bl_parent_id = "MC_PT_adjust_panel"
     bl_options = {"DEFAULT_CLOSED"}
-    bl_order = 3
+    bl_order = 0
 
     def draw(self, context):
         layout = self.layout

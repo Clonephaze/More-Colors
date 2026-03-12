@@ -25,6 +25,7 @@ _SHORTCUT_OPERATORS = [
     ("Color By Selection", "morecolors.color_by_selection"),
     ("Color Adjustments", "morecolors.color_adjustments"),
     ("Attribute Transfer", "morecolors.attribute_transfer"),
+    ("Symmetrize Colors", "morecolors.symmetrize_vertex_colors"),
 ]
 
 
@@ -150,6 +151,17 @@ _TRANSFER_MODE_ITEMS = [
     ("RAYCAST", "Raycast", ""),
 ]
 
+_SYMMETRIZE_AXIS_ITEMS = [
+    ("X", "X", ""),
+    ("Y", "Y", ""),
+    ("Z", "Z", ""),
+]
+
+_SYMMETRIZE_DIRECTION_ITEMS = [
+    ("POSITIVE_TO_NEGATIVE", "+ to \u2212", ""),
+    ("NEGATIVE_TO_POSITIVE", "\u2212 to +", ""),
+]
+
 
 # ---------------------------------------------------------------------------
 # Addon Preferences
@@ -168,6 +180,7 @@ class MoreColorsPreferences(AddonPreferences):
     show_selection: BoolProperty(name="Selection Defaults", default=False)
     show_mask: BoolProperty(name="Color Mask Defaults", default=False)
     show_palette: BoolProperty(name="Default Palette", default=False)
+    show_symmetrize: BoolProperty(name="Symmetrize Defaults", default=False)
 
     # -- Fill defaults --
     default_fill_color: FloatVectorProperty(
@@ -229,6 +242,10 @@ class MoreColorsPreferences(AddonPreferences):
         default=0,
         min=0,
     )
+    default_normalize_per_island: BoolProperty(
+        name="Normalize Per Island",
+        default=False,
+    )
 
     # -- Smooth defaults --
     default_smooth_iterations: IntProperty(
@@ -262,6 +279,24 @@ class MoreColorsPreferences(AddonPreferences):
         name="Mode",
         items=_TRANSFER_MODE_ITEMS,
         default="NEAREST_VERTEX",
+    )
+
+    # -- Symmetrize defaults --
+    default_symmetrize_axis: EnumProperty(
+        name="Axis",
+        items=_SYMMETRIZE_AXIS_ITEMS,
+        default="X",
+    )
+    default_symmetrize_direction: EnumProperty(
+        name="Direction",
+        items=_SYMMETRIZE_DIRECTION_ITEMS,
+        default="POSITIVE_TO_NEGATIVE",
+    )
+    default_symmetrize_threshold: FloatProperty(
+        name="Threshold",
+        default=0.001,
+        min=0.0,
+        max=1.0,
     )
 
     # -- Selection defaults --
@@ -324,6 +359,8 @@ class MoreColorsPreferences(AddonPreferences):
             box.prop(self, "default_noise_scale")
             box.prop(self, "default_noise_detail")
             box.prop(self, "default_noise_seed")
+            box.separator()
+            box.prop(self, "default_normalize_per_island")
 
         # -- Smooth Defaults --
         self._draw_section_header(layout, "show_smooth", "SMOOTHCURVE", "Smooth Defaults")
@@ -344,6 +381,14 @@ class MoreColorsPreferences(AddonPreferences):
         if self.show_transfer:
             box = layout.box()
             box.prop(self, "default_transfer_mode")
+
+        # -- Symmetrize Defaults --
+        self._draw_section_header(layout, "show_symmetrize", "MOD_MIRROR", "Symmetrize Defaults")
+        if self.show_symmetrize:
+            box = layout.box()
+            box.prop(self, "default_symmetrize_axis")
+            box.prop(self, "default_symmetrize_direction")
+            box.prop(self, "default_symmetrize_threshold")
 
         # -- Selection Defaults --
         self._draw_section_header(layout, "show_selection", "RESTRICT_SELECT_OFF", "Selection Defaults")
@@ -445,6 +490,7 @@ def _apply_startup_defaults(_=None):
         gradient_tool.noise_scale = prefs.default_noise_scale
         gradient_tool.noise_detail = prefs.default_noise_detail
         gradient_tool.noise_seed = prefs.default_noise_seed
+        gradient_tool.normalize_per_island = prefs.default_normalize_per_island
 
     # Smooth
     smooth_tool = getattr(scene, "more_colors_smooth_tool", None)
@@ -462,6 +508,13 @@ def _apply_startup_defaults(_=None):
     transfer_tool = getattr(scene, "more_colors_attribute_transfer_tool", None)
     if transfer_tool:
         transfer_tool.transfer_mode = prefs.default_transfer_mode
+
+    # Symmetrize
+    sym_tool = getattr(scene, "more_colors_symmetrize_tool", None)
+    if sym_tool:
+        sym_tool.axis = prefs.default_symmetrize_axis
+        sym_tool.direction = prefs.default_symmetrize_direction
+        sym_tool.threshold = prefs.default_symmetrize_threshold
 
     # Selection
     selection_tool = getattr(scene, "more_colors_color_by_selection_tool", None)

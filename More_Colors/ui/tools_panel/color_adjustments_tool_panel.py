@@ -10,9 +10,9 @@ from ..base_panel_info import BasePanelInfo
 class MC_PT_color_adjustments_tool_panel(BasePanelInfo, Panel):
     bl_label = "Color Adjustments"
     bl_idname = "MC_PT_color_adjustments_tool_panel"
-    bl_parent_id = "MC_PT_tools_panel"
+    bl_parent_id = "MC_PT_adjust_panel"
     bl_options = {"DEFAULT_CLOSED"}
-    bl_order = 4
+    bl_order = 1
 
     def draw(self, context):
         layout = self.layout

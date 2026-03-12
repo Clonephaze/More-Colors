@@ -38,6 +38,8 @@ class MC_OT_add_color_by_position(BaseColorOperator):
                 values = self._compute_values(obj, tool, context)
                 if values is None:
                     continue
+                if tool.normalize_per_island:
+                    values = self._normalize_per_island(obj, values)
                 self._apply_gradient(obj, values, color_ramp, mask, select_mode)
                 any_applied = True
 
@@ -573,6 +575,61 @@ class MC_OT_add_color_by_position(BaseColorOperator):
         if val_range == 0:
             return np.zeros_like(values)
         return (values - min_val) / val_range
+
+    @staticmethod
+    def _normalize_per_island(obj, values):
+        """Re-normalize values independently per connected mesh island."""
+        mesh = obj.data
+        n_polys = len(mesh.polygons)
+        if n_polys == 0:
+            return values
+
+        # Build edge -> face adjacency
+        edge_to_faces = {}
+        for poly_index in range(n_polys):
+            poly = mesh.polygons[poly_index]
+            for edge_key in poly.edge_keys:
+                edge_to_faces.setdefault(edge_key, []).append(poly_index)
+
+        adjacency = [[] for _ in range(n_polys)]
+        for face_list in edge_to_faces.values():
+            for i in range(len(face_list)):
+                for j in range(i + 1, len(face_list)):
+                    adjacency[face_list[i]].append(face_list[j])
+                    adjacency[face_list[j]].append(face_list[i])
+
+        # Flood-fill connected components and normalize each
+        visited = np.zeros(n_polys, dtype=bool)
+        result = values.copy()
+
+        for start in range(n_polys):
+            if visited[start]:
+                continue
+            queue = [start]
+            visited[start] = True
+            island_faces = []
+            while queue:
+                face = queue.pop()
+                island_faces.append(face)
+                for neighbor in adjacency[face]:
+                    if not visited[neighbor]:
+                        visited[neighbor] = True
+                        queue.append(neighbor)
+
+            island_verts = set()
+            for fi in island_faces:
+                island_verts.update(mesh.polygons[fi].vertices)
+            idx = np.array(sorted(island_verts), dtype=np.intp)
+
+            island_vals = result[idx]
+            min_val = island_vals.min()
+            val_range = island_vals.max() - min_val
+            if val_range > 0:
+                result[idx] = (island_vals - min_val) / val_range
+            else:
+                result[idx] = 0.0
+
+        return result
 
     @staticmethod
     def _apply_gradient(obj, values, color_ramp, mask, select_mode):

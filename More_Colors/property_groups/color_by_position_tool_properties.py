@@ -138,6 +138,13 @@ class ColorByPositionToolProperties(PropertyGroup):
         default=False,
     )
 
+    normalize_per_island: BoolProperty(
+        name="Normalize Per Island",
+        description="Normalize values independently for each connected mesh island"
+                    " so every island uses the full 0\u20131 range",
+        default=False,
+    )
+
     color_ramp_material_name: StringProperty(
         name="Color Ramp Material Name",
         default="MORECOLORS_ColorByPositionRamp",

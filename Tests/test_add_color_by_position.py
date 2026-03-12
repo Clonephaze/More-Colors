@@ -185,5 +185,64 @@ class TestCotangentCurvatureValues(unittest.TestCase):
         _cleanup()
 
 
+class TestNormalizePerIsland(unittest.TestCase):
+    def test_two_islands_independent_range(self):
+        """Two disjoint quads with different value ranges each normalize to 0–1."""
+        _cleanup()
+        verts = [
+            (0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0),  # island A
+            (5, 0, 0), (6, 0, 0), (6, 1, 0), (5, 1, 0),   # island B
+        ]
+        faces = [(0, 1, 2, 3), (4, 5, 6, 7)]
+        obj = _create_mesh_object("IslandTest", verts, faces)
+        # Island A values 0.2–0.4, Island B values 0.7–0.9
+        values = np.array([0.2, 0.4, 0.3, 0.2, 0.7, 0.9, 0.8, 0.7])
+        result = MC_OT_add_color_by_position._normalize_per_island(obj, values)
+        # Each island should span 0–1
+        self.assertAlmostEqual(float(result[:4].min()), 0.0, places=5)
+        self.assertAlmostEqual(float(result[:4].max()), 1.0, places=5)
+        self.assertAlmostEqual(float(result[4:].min()), 0.0, places=5)
+        self.assertAlmostEqual(float(result[4:].max()), 1.0, places=5)
+        _cleanup()
+
+    def test_single_island_matches_global(self):
+        """A single connected mesh island should normalize the same as global."""
+        _cleanup()
+        verts = [(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0)]
+        faces = [(0, 1, 2, 3)]
+        obj = _create_mesh_object("SingleIsland", verts, faces)
+        values = np.array([0.3, 0.7, 0.5, 0.3])
+        result = MC_OT_add_color_by_position._normalize_per_island(obj, values)
+        expected = MC_OT_add_color_by_position._normalize_np(values)
+        np.testing.assert_array_almost_equal(result, expected, decimal=5)
+        _cleanup()
+
+    def test_uniform_island_becomes_zero(self):
+        """An island where all vertices have the same value normalizes to 0."""
+        _cleanup()
+        verts = [
+            (0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0),  # island A
+            (5, 0, 0), (6, 0, 0), (6, 1, 0), (5, 1, 0),   # island B (uniform)
+        ]
+        faces = [(0, 1, 2, 3), (4, 5, 6, 7)]
+        obj = _create_mesh_object("UniformIsland", verts, faces)
+        values = np.array([0.2, 0.8, 0.5, 0.2, 0.5, 0.5, 0.5, 0.5])
+        result = MC_OT_add_color_by_position._normalize_per_island(obj, values)
+        np.testing.assert_array_almost_equal(result[4:], [0.0, 0.0, 0.0, 0.0], decimal=5)
+        _cleanup()
+
+    def test_does_not_modify_original(self):
+        """The input array should not be modified in place."""
+        _cleanup()
+        verts = [(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0)]
+        faces = [(0, 1, 2, 3)]
+        obj = _create_mesh_object("NoMutate", verts, faces)
+        values = np.array([0.1, 0.9, 0.5, 0.3])
+        original = values.copy()
+        MC_OT_add_color_by_position._normalize_per_island(obj, values)
+        np.testing.assert_array_equal(values, original)
+        _cleanup()
+
+
 if __name__ == "__main__":
     unittest.main()

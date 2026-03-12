@@ -16,6 +16,7 @@ from . import (
     reset_vertex_colors,
     simple_fill,
     smooth_vertex_colors,
+    symmetrize_vertex_colors,
 )
 
 classes = [
@@ -42,6 +43,8 @@ classes = [
     color_adjustments.MC_OT_color_adjustments,
 
     attribute_transfer.MC_OT_attribute_transfer,
+
+    symmetrize_vertex_colors.MC_OT_symmetrize_vertex_colors,
 ]
 
 

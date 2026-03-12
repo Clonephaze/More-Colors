@@ -15,6 +15,7 @@ from . import (
     random_color_tool_properties,
     simple_fill_tool_properties,
     smooth_tool_properties,
+    symmetrize_tool_properties,
 )
 
 classes = [
@@ -27,6 +28,7 @@ classes = [
     color_by_selection_tool_properties.ColorBySelectionToolProperties,
     color_adjustments_tool_properties.ColorAdjustmentsToolProperties,
     attribute_transfer_tool_properties.AttributeTransferToolProperties,
+    symmetrize_tool_properties.SymmetrizeToolProperties,
 ]
 
 
@@ -52,6 +54,8 @@ def register():
         type=color_adjustments_tool_properties.ColorAdjustmentsToolProperties)
     bpy.types.Scene.more_colors_attribute_transfer_tool = bpy.props.PointerProperty(
         type=attribute_transfer_tool_properties.AttributeTransferToolProperties)
+    bpy.types.Scene.more_colors_symmetrize_tool = bpy.props.PointerProperty(
+        type=symmetrize_tool_properties.SymmetrizeToolProperties)
 
 
 def unregister():
@@ -67,3 +71,4 @@ def unregister():
     del bpy.types.Scene.more_colors_color_by_selection_tool
     del bpy.types.Scene.more_colors_color_adjustments_tool
     del bpy.types.Scene.more_colors_attribute_transfer_tool
+    del bpy.types.Scene.more_colors_symmetrize_tool
